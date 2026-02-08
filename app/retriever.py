@@ -28,3 +28,12 @@ def retrieve_context(query: str, k: int = 4) -> str:
     db = _get_db()
     docs = db.similarity_search(query, k=k)
     return "\n\n".join(d.page_content for d in docs)
+
+
+def retrieve_chunks(query: str, k: int = 4) -> list[dict]:
+    """Return retrieved chunks as list of {content, metadata} for API responses."""
+    db = _get_db()
+    docs = db.similarity_search(query, k=k)
+    return [
+        d.page_content for d in docs
+    ]

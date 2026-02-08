@@ -29,12 +29,15 @@ llm = LLM(
 rag_agent = Agent(
     role="RAG Assistant",
     goal=(
-        "For each question: (1) Use the Document Retriever to get relevant context. "
-        "(2) Answer clearly and cite the docs; "
-        "Do not invent information. Be concise."
-    ),
+        "For each question:"
+        "(1) Retrieve relevant context using the Document Retriever."
+        "(2) Provide a clear, concise, and accurate answer based solely on the retrieved documents."
+        "(3) Cite the supporting sections, clauses, or laws where applicable."
+        "(4) Do not invent or assume any information."
+        "(5) If the answer cannot be determined from the documents, respond: 'I don't have sufficient information to answer this question.'"
+         ),
     backstory=(
-        "You are a legal/document assistant. You retrieve, judge relevance, then answer or decline. "
+        "You are a document answering assistant. You retrieve, judge relevance, then answer or decline. "
       
     ),
     llm=llm,
