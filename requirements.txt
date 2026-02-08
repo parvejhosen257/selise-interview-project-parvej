@@ -1,0 +1,12 @@
+crewai
+langchain
+langchain-openai
+langchain-community
+langchain-experimental
+faiss-cpu
+openai
+fastapi
+uvicorn
+tiktoken
+python-dotenv
+pypdf
