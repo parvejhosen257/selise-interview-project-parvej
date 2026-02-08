@@ -1,6 +1,6 @@
 # Mini Agentic RAG (CrewAI)
 
-A minimal RAG system with semantic chunking, Azure OpenAI embeddings, FAISS, and a single CrewAI agent that retrieves documents, evaluates sufficiency, and answers in one pass. Answers are plain text with inline citations and a Sources section at the end.
+A minimal RAG system with semantic chunking, Azure OpenAI embeddings, FAISS, and a self-critic CrewAI agent that retrieves documents, evaluates whether they suffice to answer, then answers with inline citations and a Sources section at the end.
 
 ---
 
@@ -9,9 +9,9 @@ A minimal RAG system with semantic chunking, Azure OpenAI embeddings, FAISS, and
 - Semantic chunking (LangChain) for better retrieval
 - Azure OpenAI for embeddings and chat (gpt-4o-mini)
 - FAISS vector store for similarity search
-- Single RAG agent with tool calling (Document Retriever)
-- One-pass flow: retrieve → evaluate → answer
-- Plain-text answers with citations and Sources list
+- Self-critic RAG agent with tool calling (Document Retriever)
+- Retrieve → evaluate sufficiency → answer (with self-critique of relevance)
+- Answers with citations and a Sources section at the end
 - FastAPI and CLI interfaces
 
 ---
@@ -36,8 +36,8 @@ A minimal RAG system with semantic chunking, Azure OpenAI embeddings, FAISS, and
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           ONLINE: QUERY                                      │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  User question  →  API / CLI  →  Crew (1 agent, 1 task)                     │
-│                              →  RAG Agent                                   │
+│  User question  →  API / CLI  →  Crew (self-critic agent)                   │
+│                              →  RAG Agent (retrieve, critique, answer)     │
 │                                    │                                        │
 │                                    ├─► Document Retriever tool              │
 │                                    │        │                               │
@@ -53,9 +53,9 @@ A minimal RAG system with semantic chunking, Azure OpenAI embeddings, FAISS, and
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Agent and steps (one pass)
+### Self-critic agent and steps
 
-The RAG agent performs three steps in a single LLM pass:
+The RAG agent acts as a self-critic: it retrieves, evaluates whether the retrieved content is sufficient, then answers or declines.
 
 ```mermaid
 flowchart LR
@@ -63,9 +63,9 @@ flowchart LR
         Q[User Question]
     end
 
-    subgraph Agent["RAG Assistant (single agent)"]
+    subgraph Agent["Self-critic RAG Agent"]
         S1[1. Retrieve]
-        S2[2. Evaluate]
+        S2[2. Evaluate / Self-critique]
         S3[3. Answer]
         S1 --> S2 --> S3
     end
@@ -79,16 +79,14 @@ flowchart LR
     Q --> Agent
     S1 --> T
     T --> S2
-    S3 --> Out[Plain text + Citations + Sources]
+    S3 --> Out[Answer + Citations + Sources]
 ```
 
 | Step | Description |
 |------|-------------|
 | 1. Retrieve | Agent calls the **Document Retriever** tool with the question. The tool runs a FAISS similarity search (Azure embeddings) and returns the top-k chunks. |
-| 2. Evaluate | Agent decides whether the retrieved chunks are **sufficient** to answer the question. |
-| 3. Answer | If sufficient: answer in **plain text** with inline citations (e.g. [1], [2]) and a **Sources** section at the end. If not: state that the retrieved docs are insufficient. |
-
-No markdown is used in the answer; output is plain text with line breaks and a final Sources list.
+| 2. Evaluate / Self-critique | Agent evaluates whether the retrieved chunks are **sufficient** to answer the question (self-critique of relevance and coverage). |
+| 3. Answer | If sufficient: answer with inline citations (e.g. [1], [2]) and a **Sources** section at the end. If not: state that the retrieved docs are insufficient. |
 
 ---
 
@@ -104,9 +102,9 @@ No markdown is used in the answer; output is plain text with line breaks and a f
 │   ├── ingest.py         # Semantic chunking + FAISS index build
 │   ├── retriever.py      # FAISS retrieval (retrieve_context)
 │   ├── tools.py          # CrewAI tool: Document Retriever
-│   ├── agents.py         # Single RAG agent (CrewAI)
-│   ├── tasks.py          # Single task: retrieve → evaluate → answer
-│   ├── crew.py           # Crew orchestration (1 agent, 1 task)
+│   ├── agents.py         # Self-critic RAG agent (CrewAI)
+│   ├── tasks.py          # Task: retrieve → evaluate → answer
+│   ├── crew.py           # Crew orchestration
 │   ├── api.py            # FastAPI server
 │   └── cli.py            # Interactive CLI
 ├── .env.example
@@ -203,9 +201,8 @@ GET /health
 
 ## Output format
 
-The agent returns:
+The self-critic agent returns:
 
-- Plain text only (no markdown).
 - Inline citations (e.g. [1], [2] or section names).
 - A **Sources** section at the end listing each document/section used.
 - If the retrieved docs are not sufficient, a clear statement that they are insufficient.
